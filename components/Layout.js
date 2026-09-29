@@ -1,0 +1,374 @@
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import ParticleBackground from './ParticleBackground';
+import { ADMIN_IDS } from '../lib/admins';
+
+export default function Layout({ children }) {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.user) {
+          router.push('/');
+          return;
+        }
+        setUser(data.user);
+        setIsAdmin(ADMIN_IDS.includes(data.user.id));
+      });
+  }, []);
+
+  // Загрузка объявления
+  useEffect(() => {
+    fetch('/api/announcement')
+      .then(res => res.json())
+      .then(data => {
+        if (data.announcement) setAnnouncement(data.announcement);
+      })
+      .catch(() => {});
+  }, []);
+
+  const tabs = [
+    { name: 'Формы', path: '/dashboard', icon: '📝' },
+    { name: 'Профиль', path: '/profile', icon: '👤' },
+    { name: 'Юзеры', path: '/members', icon: '👥' },
+    { name: 'Справка', path: '/help', icon: '📖' },
+    ...(isAdmin ? [{ name: 'Админ', path: '/admin', icon: '🛠️' }] : []),
+  ];
+
+  return (
+    <div className="app-container">
+      <ParticleBackground />
+
+      <nav className="navbar">
+        <div className="nav-logo">
+          <img src="/logo.png" alt="FIB Logo" className="nav-logo-img" />
+          <span>FIB Forms</span>
+        </div>
+        <div className="nav-tabs">
+          {tabs.map(tab => (
+            <button
+              key={tab.path}
+              className={`nav-tab ${router.pathname === tab.path ? 'active' : ''}`}
+              onClick={() => router.push(tab.path)}
+            >
+              {tab.icon} {tab.name}
+            </button>
+          ))}
+        </div>
+        <div className="nav-user">
+          {user && <span className="nav-username">{user.username}</span>}
+
+          <button onClick={async () => { await fetch('/api/logout', { method: 'POST' }); router.push('/'); }}>
+            Выйти
+          </button>
+        </div>
+      </nav>
+
+      {announcement && (
+        <div className="announcement-banner">
+          <span>📢 {announcement}</span>
+        </div>
+      )}
+
+      <main key={router.pathname} className="main-content">
+        {children}
+      </main>
+
+      <footer className="footer">
+        <a href="/terms" className="footer-link">Мини-игра</a>
+        <span className="footer-sep">•</span>
+        <a href="/privacy" className="footer-link">Полезные ссылки</a>
+        <span className="footer-sep">•</span>
+        <a href="/hosting" className="footer-link">Фотохостинги</a>
+        <span className="footer-sep">•</span>
+        <a href="/admins" className="footer-link">Админы</a>
+        <span className="footer-sep">•</span>
+        <a href="/author" className="footer-author-btn" title="Об авторе">
+          <span className="author-glow-dot" />
+          <span className="author-label">Автор: @muruh1ta</span>
+        </a>
+      </footer>
+
+      <div className="legal-links">
+        <a href="/dish" className="legal-link legal-link-discord" title="Проблемы с Discord?">
+          <span className="legal-icon">⚠️</span> Проблемы с Discord?
+        </a>
+        <a href="/leh" className="legal-link" title="Условия пользования">
+          <span className="legal-icon">📓</span> ToS
+        </a>
+        <a href="/geh" className="legal-link" title="Политика конфиденциальности">
+          <span className="legal-icon">📃</span> Privacy
+        </a>
+      </div>
+
+      <style jsx>{`
+        .app-container {
+          min-height: 100vh;
+          background: #0a0a0a;
+          color: white;
+          position: relative;
+        }
+
+        .app-container > :global(.p5Canvas) {
+          position: fixed !important;
+          top: 0;
+          left: 0;
+          z-index: 0;
+        }
+
+        .navbar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 15px 30px;
+          background: rgba(26, 26, 26, 0.8);
+          backdrop-filter: blur(15px);
+          border-bottom: 1px solid #333;
+        }
+        .nav-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 20px;
+          font-weight: bold;
+          color: #fff;
+        }
+        .nav-logo-img {
+          width: 28px;
+          height: 28px;
+          object-fit: contain;
+        }
+        .nav-tabs {
+          display: flex;
+          gap: 10px;
+        }
+        .nav-tab {
+          background: transparent;
+          border: none;
+          color: #aaa;
+          padding: 8px 15px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.3s;
+          font-size: 14px;
+        }
+        .nav-tab:hover {
+          color: #fff;
+          background: #333;
+        }
+        .nav-tab.active {
+          color: #fff;
+          background: #fff;
+          color: #000;
+          font-weight: bold;
+        }
+        .nav-user {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .nav-username {
+          color: #fff;
+          font-size: 14px;
+        }
+        .nav-user button {
+          background: #444;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+
+        .announcement-banner {
+          position: fixed;
+          top: 65px;
+          left: 0;
+          width: 100%;
+          background: rgba(255, 152, 0, 0.15);
+          border-bottom: 1px solid #FF9800;
+          color: #FFB74D;
+          padding: 12px 20px;
+          text-align: center;
+          font-weight: 500;
+          z-index: 90;
+        }
+        .announcement-banner span {
+          font-size: 15px;
+        }
+
+        .main-content {
+          position: relative;
+          z-index: 10;
+          padding: 30px;
+          padding-top: 90px;
+          padding-bottom: 80px;
+          max-width: 1200px;
+          margin: 0 auto;
+          animation: fadeInUp 0.5s ease both;
+        }
+
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          z-index: 100;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+          padding: 15px 20px;
+          background: rgba(10, 10, 10, 0.9);
+          backdrop-filter: blur(10px);
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .footer-link {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 6px;
+          padding: 4px 10px;
+          color: #aaa;
+          text-decoration: none;
+          transition: all 0.2s;
+          font-size: 12px;
+        }
+        .footer-link:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          border-color: rgba(255, 255, 255, 0.3);
+        }
+        .footer-sep { color: #555; }
+
+        /* 💜 Кнопка автора — мягкая подсветка */
+        .footer-author-btn {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 12px 4px 9px;
+          background: rgba(168, 85, 247, 0.08);
+          border: 1px solid rgba(168, 85, 247, 0.3);
+          border-radius: 20px;
+          color: #C4A5F0;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          transition: all 0.25s ease;
+          box-shadow: 0 0 8px rgba(168, 85, 247, 0.15);
+        }
+        .footer-author-btn:hover {
+          background: rgba(168, 85, 247, 0.18);
+          border-color: rgba(168, 85, 247, 0.6);
+          color: #fff;
+          transform: translateY(-1px);
+          box-shadow: 0 0 14px rgba(168, 85, 247, 0.4);
+        }
+        .author-glow-dot {
+          display: inline-block;
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #C4A5F0;
+          box-shadow: 0 0 6px rgba(168, 85, 247, 0.7);
+          flex-shrink: 0;
+        }
+        .author-label {
+          white-space: nowrap;
+        }
+
+        /* 📌 Кнопки справа-снизу */
+        .legal-links {
+          position: fixed;
+          bottom: 70px;
+          right: 20px;
+          z-index: 99;
+          display: flex;
+          gap: 8px;
+          animation: legalIn 0.6s ease 0.3s both;
+        }
+        .legal-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: rgba(20, 20, 20, 0.85);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(168, 85, 247, 0.35);
+          border-radius: 20px;
+          color: #C4A5F0;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          transition: all 0.25s ease;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+        .legal-link:hover {
+          background: rgba(88, 101, 242, 0.15);
+          border-color: #A855F7;
+          color: #fff;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(168, 85, 247, 0.35);
+        }
+        .legal-icon { font-size: 13px; }
+
+        /* 🔴 Красная кнопка «Проблемы с Discord?» */
+        .legal-link-discord {
+          background: rgba(255, 60, 60, 0.15);
+          border-color: rgba(255, 60, 60, 0.6);
+          color: #ff8080;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 60, 60, 0.35);
+        }
+        .legal-link-discord:hover {
+          background: rgba(255, 60, 60, 0.3);
+          border-color: #ff4444;
+          color: #fff;
+          box-shadow: 0 8px 25px rgba(255, 60, 60, 0.5), 0 0 20px rgba(255, 60, 60, 0.4);
+        }
+
+        @keyframes legalIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 500px) {
+          .legal-links {
+            bottom: 65px;
+            right: 10px;
+            gap: 6px;
+            flex-direction: column;
+            align-items: flex-end;
+          }
+          .legal-link {
+            padding: 5px 10px;
+            font-size: 11px;
+          }
+          .nav-username {
+            display: none;
+          }
+          .footer-author-btn {
+            padding: 4px 10px 4px 8px;
+            font-size: 11px;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
